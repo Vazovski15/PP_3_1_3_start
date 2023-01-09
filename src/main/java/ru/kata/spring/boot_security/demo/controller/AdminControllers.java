@@ -45,6 +45,9 @@ public class AdminControllers {
     public String getUserFormEdit(Model model, @PathVariable("id") Long id) {
         model.addAttribute("user", userServiceImpl.findByIdUsers(id));
         return "admin/edit";
+
+
+
     }
 
     @PatchMapping("/{id}")
