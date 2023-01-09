@@ -1,48 +1,80 @@
 package ru.kata.spring.boot_security.demo.service;
 
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.kata.spring.boot_security.demo.dao.UserDao;
 import ru.kata.spring.boot_security.demo.model.User;
+import ru.kata.spring.boot_security.demo.repository.UserRepository;
 
 
 import java.util.List;
 @Service
 public class UserServiceImpl implements UserService{
-    private UserDao userDao;
 
-    //@Autowired
-    public UserServiceImpl(UserDao userDao) {
-        this.userDao = userDao;
+
+    private final UserRepository userRepository;
+
+    private final RoleServiceImpl roleService;
+
+    public UserServiceImpl(UserRepository userRepository, RoleServiceImpl roleService) {
+        this.userRepository = userRepository;
+        this.roleService = roleService;
     }
 
-    @Transactional(readOnly = true)
+
     @Override
-    public List<User> listUsers() {
-        return userDao.getAllUsers();
-    }
-
-    @Transactional(readOnly = true)
-    @Override
-    public User getUser(int id) {
-        return userDao.getUser(id);
-    }
-
     @Transactional
-    @Override
-    public void edit(int id, User user) {
-        userDao.edit(id, user);
+    public User findByUsername(String username) {
+        return userRepository.findByUsername(username);
     }
 
-    @Transactional
     @Override
-    public void add(User user) {
-        userDao.add(user);
+    @Transactional
+    public List<User> findAllUsers() {
+        return userRepository.findAll();
     }
 
-    @Transactional
     @Override
-    public void delete(int id) {
-        userDao.delete(id);
+    @Transactional
+    public void saveUser(User user) {
+        userRepository.save(user);
+
     }
-}
+
+    @Override
+    @Transactional
+    public User findByIdUsers(Long id) {
+        return userRepository.findById(id).orElseThrow(()->new RuntimeException("Пользователь не найден") );
+    }
+
+    @Override
+    @Transactional
+    public void updateUser(Long id, User user) {
+        User userFromDb=findByIdUsers(id);
+        userFromDb.setUsername(user.getUsername());
+        userFromDb.setPassword(user.getPassword());
+        userRepository.save(userFromDb);
+
+    }
+
+    @Override
+    @Transactional
+    public void deleteByIdUsers(Long id) {
+        userRepository.deleteById(id);
+
+    }
+
+    @Override
+    @Transactional
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        User user = findByUsername(username);
+        if(user == null) {
+            throw new UsernameNotFoundException(String.format("User '%s' not found", username));
+        }
+        return new org.springframework.security.core.userdetails.User(user.getUsername(), user.getPassword(),
+                roleService.mapRolesToAuthorities(user.getRoles()));
+    }
+
+    }
+
